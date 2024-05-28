@@ -1,0 +1,6 @@
+@Satizen_Api_HostAddress = http://localhost:5084
+
+GET {{Satizen_Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
