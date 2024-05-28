@@ -1,13 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Satizen_Api.Models
+namespace Satizen_Api.Models.Dto
 {
-    public class InstitucionModels
+    public class InstitucionUpdateDto
     {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int idInstitucion { get; set; }
+        [Required]
+        public int idInstitucion { get; set;}
         [Required]
         [MaxLength(40)]
         public string? nombreInstitucion { get; set; }
@@ -22,9 +20,8 @@ namespace Satizen_Api.Models
         public string? correoInstitucion { get; set; }
         [Required]
         [MaxLength(20)]
-        public string? celularInstitucion  { get; set; }
+        public string? celularInstitucion { get; set; }
         [Required]
         public int Id { get; internal set; }
     }
 }
-

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Satizen_Api;
 using Satizen_Api.Datos;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -14,6 +14,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(Option =>
 {
     Option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+
+builder.Services.AddAutoMapper(typeof(MappingConfig));
 
 var app = builder.Build();
 

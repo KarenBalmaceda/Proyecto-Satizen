@@ -6,6 +6,8 @@ using Satizen_Api.Models;
 using Satizen_Api.Models.Dto;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using AutoMapper;
 namespace Satizen_Api.Controllers
 {
     [Route("api/[controller]")]
@@ -14,20 +16,25 @@ namespace Satizen_Api.Controllers
     {
         private readonly ILogger <InstitucionController> _logger;
         private readonly ApplicationDbContext _db;
+        private readonly IMapper _mapper;
+        private int idInstitucion;
 
-
-        public InstitucionController(ILogger<InstitucionController> logger, ApplicationDbContext db)
+        public InstitucionController(ILogger<InstitucionController> logger, ApplicationDbContext db, IMapper mapper)
         {
             _logger = logger;
             _db = db;
+            _mapper = mapper;
         }
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<IEnumerable<InstitucionModels>> GetInstitucion()
+        public async Task<ActionResult<IEnumerable<InstitucionDto>>> GetInstitucion()
         {
             _logger.LogInformation("Obtener las Instituciones");
-            return Ok(_db.Institucion.ToList());
+
+            IEnumerable<InstitucionModels> institucionList = await _db.Institucion.ToListAsync();
+
+            return Ok(_mapper.Map<IEnumerable<InstitucionDto>>(institucionList));
 
         }
 
@@ -35,83 +42,66 @@ namespace Satizen_Api.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<InstitucionModels>> GetInstitucion(int id)
+        public async Task<ActionResult<InstitucionDto>> GetInstitucion(int idInstitucion)
         {
-            if (id == 0)
+            if (idInstitucion == 0)
             {
-                _logger.LogError("Error al traer una Institucion con Id" + id);
+                _logger.LogError("Error al traer una Institucion con Id" + idInstitucion);
                 return BadRequest();
             }
             // var institucion = InstitucionStore.institucionList.FirstOrDefault(v => v.Id == id);
-            var institucion = _db.Institucion.FirstOrDefault(v => v.Id == id);
+            var institucion = await _db.Institucion.FirstOrDefaultAsync(v => v.idInstitucion == idInstitucion);
             if(institucion== null)
             {
                 return NotFound();
 
             }
 
-            return Ok(institucion);
+            return Ok(_mapper.Map<InstitucionDto>(institucion));
         }
 
 
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<InstitucionDto> CrearInstitucion([FromBody] InstitucionDto institucionDto)
+        public async Task<ActionResult<InstitucionDto>> CrearInstitucion([FromBody] InstitucionCreateDto createDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            if (_db.Institucion.FirstOrDefault(v => v.nombreInstitucion.ToLower() == institucionDto.nombreInstitucion.ToLower()) != null) 
+            if (await _db.Institucion.FirstOrDefaultAsync(v => v.nombreInstitucion.ToLower() == createDto.nombreInstitucion.ToLower()) != null) 
             {
                 ModelState.AddModelError("NombreExiste", "La institucion ya existe");
                 return BadRequest(ModelState);
             }
-            if (institucionDto == null)
+            if (createDto == null)
             {
-                return BadRequest(institucionDto);
+                return BadRequest(createDto);
             }
-            if (institucionDto.idInstitucion > 0)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError);
-            }
-            InstitucionModels models = new()
-            {
-                nombreInstitucion = institucionDto.nombreInstitucion,
-                direccionInstitucion = institucionDto.direccionInstitucion,
-                telefonoInstitucion = institucionDto.telefonoInstitucion,
-                correoInstitucion = institucionDto.correoInstitucion,
-                celularInstitucion = institucionDto.celularInstitucion,
+            InstitucionModels models = _mapper.Map<InstitucionModels>(createDto);
 
-            };
+         
 
-            _db.Institucion.Add(models);
-            _db.SaveChanges();
+             await _db.Institucion.AddAsync(models);
+             await _db.SaveChangesAsync();
 
-            return CreatedAtRoute("GetInstitucion", new { id = institucionDto.idInstitucion }, institucionDto);
+            return base.CreatedAtRoute("GetInstitucion", new { idInstitucion = models.idInstitucion }, models);
         }
 
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateInstitucion(int id, InstitucionDto institucionDto)
+        public async Task<IActionResult> UpdateInstitucion(int idInstitucion, InstitucionUpdateDto updateDto)
         {
-            if (institucionDto==null || id!= institucionDto.idInstitucion)
+            if (updateDto==null || idInstitucion!= updateDto.idInstitucion)
             {
                 return BadRequest();
             }
 
-            InstitucionModels models = new()
-            {
-                idInstitucion = institucionDto.idInstitucion,
-                nombreInstitucion = institucionDto.nombreInstitucion,
-                direccionInstitucion = institucionDto.direccionInstitucion,
-                telefonoInstitucion = institucionDto.telefonoInstitucion,
-                correoInstitucion = institucionDto.correoInstitucion,
-                celularInstitucion = institucionDto.celularInstitucion,
-            };
+            InstitucionModels models = _mapper.Map<InstitucionModels>(updateDto);
+
             _db.Institucion.Update(models);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
             return NoContent();
         }
 
@@ -120,19 +110,19 @@ namespace Satizen_Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteInstitucion(int id)
+        public async Task<IActionResult> DeleteInstitucion(int idInstitucion)
         {
-            if (id == 0)
+            if (idInstitucion == 0)
             {
                 return BadRequest();
             }
-            var institucion = _db.Institucion.FindAsync(id);
+            var institucion = await _db.Institucion.FirstOrDefaultAsync(v => v.idInstitucion ==idInstitucion);
             if (institucion == null)
             {
                 return NotFound();
             }
-            _db.Institucion.Remove(await institucion);
-            _db.SaveChanges();
+            _db.Institucion.Remove(institucion);
+            await _db.SaveChangesAsync();
 
      
             return NoContent();
@@ -143,23 +133,16 @@ namespace Satizen_Api.Controllers
         [HttpPatch("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public IActionResult UpdatePartialInstitucion(int id, JsonPatchDocument<InstitucionDto> patchDto)
+        public async Task< IActionResult> UpdatePartialInstitucion(int idInstitucion, JsonPatchDocument<InstitucionUpdateDto> patchDto)
         {
-            if (patchDto == null || id == 0)
+            if (patchDto == null || idInstitucion == 0)
             {
                 return BadRequest();
             }
-            var institucion = _db.Institucion.AsNoTracking().FirstOrDefault(v => v.idInstitucion == id);
+            var institucion = await _db.Institucion.AsNoTracking().FirstOrDefaultAsync(v => v.idInstitucion == idInstitucion);
 
-            InstitucionDto institucionDto = new()
-            {
-                idInstitucion = institucion.idInstitucion,
-                nombreInstitucion = institucion.nombreInstitucion,
-                direccionInstitucion = institucion.direccionInstitucion,
-                telefonoInstitucion = institucion.telefonoInstitucion,
-                correoInstitucion = institucion.correoInstitucion,
-                celularInstitucion = institucion.celularInstitucion,
-            };
+            InstitucionUpdateDto institucionDto = _mapper.Map<InstitucionUpdateDto>(institucion);
+
             if (institucion == null) return BadRequest();
 
             patchDto.ApplyTo(institucionDto, (Microsoft.AspNetCore.JsonPatch.Adapters.IObjectAdapter)ModelState);
@@ -168,17 +151,11 @@ namespace Satizen_Api.Controllers
             {
                 return BadRequest(ModelState);
             }
-            InstitucionModels models = new()
-            {
-                idInstitucion = institucionDto.idInstitucion,
-                nombreInstitucion = institucionDto.nombreInstitucion,
-                direccionInstitucion = institucionDto.direccionInstitucion,
-                telefonoInstitucion = institucionDto.telefonoInstitucion,
-                correoInstitucion = institucionDto.correoInstitucion,
-                celularInstitucion = institucionDto.celularInstitucion,
-            };
+
+            InstitucionModels models = _mapper.Map<InstitucionModels>(institucionDto);
+            
             _db.Institucion.Update(models);
-            _db.SaveChanges();
+            await _db.SaveChangesAsync();
             return NoContent();
         }
     }
